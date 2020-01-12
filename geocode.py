@@ -12,7 +12,11 @@ def here(api_key, addresses_list):
     for address in addresses_list:
         params = {"apiKey": api_key, "searchtext": address}
         resp = requests.get(url=URL, params=params)
-        coords.append(resp.json()["Response"]["View"][0]["Result"][0]["Location"]["DisplayPosition"])
+        address_label = resp.json()["Response"]["View"][0]["Result"][0]["Location"]["Address"]["Label"]
+        geocoded_address_coords = resp.json()["Response"]["View"][0]["Result"][0]["Location"]["DisplayPosition"]
+        geocoded_address_coords["AddressLabel"] = address_label
+        coords.append(geocoded_address_coords)
+        print(coords)
     return coords
 
 

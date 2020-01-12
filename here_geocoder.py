@@ -204,6 +204,7 @@ class HereGeocoder:
         self.dlg.FieldsComboBox.addItems([field for field in fields])
 
     def fill_layer_from_geocoded_data(self, layer):
+        api_key = self.dlg.ApiKeyField.text()
         addresses = gather_adresses_by_field(self.dlg.FilePathField.text(), str(self.dlg.FieldsComboBox.currentText()))
         addresses = here(KEY, addresses)
         for address in addresses:
@@ -212,7 +213,8 @@ class HereGeocoder:
             layer.updateFields()
             point = QgsPointXY(address['Longitude'], address['Latitude'])
             feat = QgsFeature()
-            feat.setAttributes(["Ну бажожда"])
+            # feat.setAttributes(address["AddressLabel"])
+            feat.setAttributes([address["AddressLabel"]])
             feat.setGeometry(QgsGeometry.fromPointXY(point))
             prov.addFeatures([feat])
             layer.updateExtents()
