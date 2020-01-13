@@ -1,6 +1,5 @@
-# Project Title
+# Qgis Here Geocoder
 
-Qgis Here Geocoder
 ## Getting Started
 
 This plugin is made for fast batch geocoding from JSON file with addresses.
@@ -18,4 +17,3 @@ AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins
 ```
 
 ### Note
-
