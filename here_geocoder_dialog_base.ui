@@ -14,10 +14,40 @@
    <string>Geocoder</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="5" column="0" colspan="4">
+    <widget class="QDialogButtonBox" name="button_box">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QLineEdit" name="FilePathField"/>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLineEdit" name="ApiKeyField">
+     <property name="placeholderText">
+      <string>API KEY</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QComboBox" name="FieldsComboBox"/>
+   </item>
    <item row="1" column="0">
     <widget class="QLabel" name="label_2">
      <property name="text">
       <string>File path</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Address field</string>
      </property>
     </widget>
    </item>
@@ -28,9 +58,6 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="2">
-    <widget class="QLineEdit" name="FilePathField"/>
-   </item>
    <item row="1" column="3">
     <widget class="QPushButton" name="pushButton">
      <property name="text">
@@ -38,30 +65,20 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="2">
-    <widget class="QLineEdit" name="ApiKeyField">
-     <property name="placeholderText">
-      <string>API KEY</string>
+   <item row="4" column="2">
+    <widget class="QProgressBar" name="progressBar">
+     <property name="maximum">
+      <number>100</number>
+     </property>
+     <property name="value">
+      <number>0</number>
      </property>
     </widget>
    </item>
-   <item row="3" column="0" colspan="4">
-    <widget class="QDialogButtonBox" name="button_box">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2">
-    <widget class="QComboBox" name="FieldsComboBox"/>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_3">
+   <item row="2" column="3">
+    <widget class="QPushButton" name="geocode_button">
      <property name="text">
-      <string>Address field</string>
+      <string>Geocode</string>
      </property>
     </widget>
    </item>

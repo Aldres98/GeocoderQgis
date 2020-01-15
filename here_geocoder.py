@@ -27,6 +27,7 @@ from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import *
 from PyQt5.QtCore import *
 from .geocode import *
+from .geocoder_worker import GeocoderWorker
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -46,7 +47,9 @@ class HereGeocoder:
             application at run time.
         :type iface: QgsInterface
         """
+
         # Save reference to the QGIS interface
+        self.threadpool = QThreadPool()
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
@@ -70,6 +73,7 @@ class HereGeocoder:
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
 
+
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -85,18 +89,17 @@ class HereGeocoder:
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('HereGeocoder', message)
 
-
     def add_action(
-        self,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
-        parent=None):
+            self,
+            icon_path,
+            text,
+            callback,
+            enabled_flag=True,
+            add_to_menu=True,
+            add_to_toolbar=True,
+            status_tip=None,
+            whats_this=None,
+            parent=None):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -173,7 +176,6 @@ class HereGeocoder:
         # will be set False in run()
         self.first_start = True
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -186,12 +188,13 @@ class HereGeocoder:
         prov = layer.dataProvider()
         prov.addAttributes([QgsField("Address", QVariant.String)])
         layer.updateFields()
-        point = QgsPointXY(37.94025, 55.70236)
+        point = QgsPointXY(address['Longitude'], address['Latitude'])
         feat = QgsFeature()
-        feat.setAttributes(["Ну бажожда"])
+        # feat.setAttributes(address["AddressLabel"])
+        feat.setAttributes([address["AddressLabel"]])
         feat.setGeometry(QgsGeometry.fromPointXY(point))
         prov.addFeatures([feat])
-        layer.updateExtents()
+        # layer.updateExtents()
 
     def select_input_file(self):
         filename, _filter = QFileDialog.getOpenFileName(self.dlg, "Select input file ", "", "*.json")
@@ -203,34 +206,72 @@ class HereGeocoder:
         self.dlg.FieldsComboBox.clear()
         self.dlg.FieldsComboBox.addItems([field for field in fields])
 
-    def fill_layer_from_geocoded_data(self, layer):
+    def geocode_from_file(self, addresses):
+        worker = GeocoderWorker(addresses, KEY, self.layer)
+        worker.progress.connect(self.update_progress)
+        worker.start()
+        self.threadpool.start(worker)
+
+
+    def start_geocoding_thread(self, address):
+        self.obj = GeocoderWorker(address, KEY, self.layer)  # no parent!
+        self.thread = QThread()  # no parent!
+        self.set_max_progress_value(len(address))
+        # 2 - Connect Worker`s Signals to Form method slots to post data.
+        self.obj.progress.connect(self.update_progress)
+        # 3 - Move the Worker object to the Thread object
+        self.obj.moveToThread(self.thread)
+        # 4 - Connect Worker Signals to the Thread slots
+        self.obj.finished.connect(self.thread.quit)
+        # 5 - Connect Thread started signal to Worker operational slot method
+        self.thread.started.connect(self.obj.run)
+        # * - Thread finished signal will close the app if you want!
+        # self.thread.finished.connect(app.exit)
+        # 6 - Start the thread
+        self.thread.start()
+
+
+    def set_max_progress_value(self, value):
+        self.dlg.progressBar.setMaximum(value)
+
+
+    def update_progress(self, progress):
+        self.dlg.progressBar.setValue(progress)
+        self.dlg.processEvents()
+
+    def fill_layer_from_geocoded_data(self):
         api_key = self.dlg.ApiKeyField.text()
         addresses = gather_adresses_by_field(self.dlg.FilePathField.text(), str(self.dlg.FieldsComboBox.currentText()))
-        addresses = here(KEY, addresses)
-        for address in addresses:
-            prov = layer.dataProvider()
-            prov.addAttributes([QgsField("Address", QVariant.String)])
-            layer.updateFields()
-            point = QgsPointXY(address['Longitude'], address['Latitude'])
-            feat = QgsFeature()
-            # feat.setAttributes(address["AddressLabel"])
-            feat.setAttributes([address["AddressLabel"]])
-            feat.setGeometry(QgsGeometry.fromPointXY(point))
-            prov.addFeatures([feat])
-            layer.updateExtents()
-
+        self.start_geocoding_thread(addresses)
+        # addresses = here(KEY, addresses)
+        # for address in addresses:
+        #     i = i + 1
+        #     self.dlg.progressBar.setValue(i)
+        #     prov = layer.dataProvider()
+        #     prov.addAttributes([QgsField("Address", QVariant.String)])
+        #     layer.updateFields()
+        #     point = QgsPointXY(address['Longitude'], address['Latitude'])
+        #     feat = QgsFeature()
+        #     # feat.setAttributes(address["AddressLabel"])
+        #     feat.setAttributes([address["AddressLabel"]])
+        #     feat.setGeometry(QgsGeometry.fromPointXY(point))
+        #     prov.addFeatures([feat])
 
 
     def run(self):
         """Run method that performs all the real work"""
+        self.layer = QgsVectorLayer('Point?crs=epsg:4326', 'point', 'memory')
+        QgsProject.instance().addMapLayers([self.layer])
+
 
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
+            # self.layer = layer
             self.dlg = HereGeocoderDialog()
             self.dlg.pushButton.clicked.connect(self.select_input_file)
-
+            self.dlg.geocode_button.clicked.connect(self.fill_layer_from_geocoded_data)
 
         # show the dialog
         self.dlg.show()
@@ -238,8 +279,5 @@ class HereGeocoder:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            layer = QgsVectorLayer('Point?crs=epsg:4326', 'point', 'memory')
-            QgsProject.instance().addMapLayers([layer])
-            self.fill_layer_from_geocoded_data(layer)
-
-            self.create_point(layer)
+            self.thread.exit()
+            pass
